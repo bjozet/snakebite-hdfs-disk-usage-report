@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+from snakebite.commandlineparser import CommandLineParser
 from snakebite.client import Client
 import argparse
 import csv
@@ -35,13 +37,15 @@ def traverse(parent):
         if size_info['fileCount'] == 0 or size_info['directoryCount'] == 0 or child['path'].count('/') == LEVELS:
             continue
         else:
-            traverse([child['path'])
+            traverse(child['path'])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='This script is used for collecting HDFS disk usage statistics')
     parser.add_argument('--file', help='Output File to write report', required=True)
     parser.add_argument('--size-limit', help='Max folder size in TB to process', required=False)
     parser.add_argument('--levels', help='how many levels to go?', required=False)
+    parser.add_argument('-n', '--namenode', help='hostname / ip of namende', required=False)
+    parser.add_argument('-p', '--port', help='namenode port', type=int, required=False)
     args = parser.parse_args()
 
     if args.size_limit:
@@ -53,7 +57,13 @@ if __name__ == '__main__':
     csv_file_writer = csv.writer(csv_file)
     try:
         write2file(header_list)
-        hdfs = Client("namenode.example.com", 6000, use_trash=False)
+        if(args.namenode and args.port):
+            hdfs = Client(args.namenode, args.port,use_trash=False)
+        else:
+            clreader = CommandLineParser()
+            clreader.parse(non_cli_input=['ls'])
+            clreader.init()
+            hdfs = clreader.client
         hdfs_root_folders = hdfs.ls(['/'])
         hdfs_root_folder_names = [folder['path'] for folder in hdfs_root_folders]
         for folder in hdfs_root_folder_names:
